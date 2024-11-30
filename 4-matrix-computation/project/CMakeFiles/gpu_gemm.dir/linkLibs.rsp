@@ -1,0 +1,1 @@
+ "/usr/lib/x86_64-linux-gnu/libblas.so" -lcudadevrt -lcudart_static -lrt -lpthread -ldl 
