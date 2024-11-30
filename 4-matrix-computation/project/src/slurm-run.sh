@@ -6,4 +6,4 @@ srun --time=00:01:00 \
   --ntasks=1 \
   --gpus-per-task=1 \
   --export=ALL \
-  bash -l -c "module load compiler/NVHPC && cd build && ./gpu_gemm"
+  bash -l -c "module load compiler/NVHPC && ./gpu_gemm"
