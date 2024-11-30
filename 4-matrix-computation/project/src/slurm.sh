@@ -6,4 +6,4 @@ srun --time=00:01:00 \
   --ntasks=1 \
   --gpus-per-task=1 \
   --export=ALL \
-  bash -l -c "module load compiler/NVHPC && module load devel/CMake && cmake -S . -B build && cd build && make"
+  bash -l -c "module load compiler/NVHPC && module load devel/CMake && make -S . -B build && cd build && make"
