@@ -81,13 +81,13 @@ __global__ void gpu_GEMM_tiling(
   T const beta,
   T* const C, size_t const ldC
 ) {
-  __shared__ float tile_A[BLOCK_SIDE * BLOCK_SIDE];
-  __shared__ float tile_B[BLOCK_SIDE * BLOCK_SIDE];
+  __shared__ float tile_A[BLOCK_SIDE][BLOCK_SIDE];
+  __shared__ float tile_B[BLOCK_SIDE][BLOCK_SIDE];
 
    int row = threadIdx.x + (blockIdx.x * blockDim.x);
   int column = threadIdx.y + (blockIdx.y * blockDim.y);
   float sum = 0.0;
-  for(t = 0; t < (K + BLOCK_SIDE - 1)/BLOCK_SIDE; ++t){
+  for(int t = 0; t < (K + BLOCK_SIDE - 1)/BLOCK_SIDE; ++t){
     if(row < M && (t * BLOCK_SIDE + threadIdx.y) < K) {
       tile_A[threadIdx.x][threadIdx.y] = A[row][t * BLOCK_SIDE + threadIdx.y];
     } else {
