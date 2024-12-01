@@ -84,7 +84,34 @@ __global__ void gpu_GEMM_tiling(
   __shared__ float tile_A[BLOCK_SIDE * BLOCK_SIDE];
   __shared__ float tile_B[BLOCK_SIDE * BLOCK_SIDE];
 
-  // Your implementation goes here.
+   int row = threadIdx.x + (blockIdx.x * blockDim.x);
+  int column = threadIdx.y + (blockIdx.y * blockDim.y);
+  float sum = 0.0;
+  for(t = 0; t < (K + BLOCK_SIDE - 1)/BLOCK_SIDE; ++t){
+    if(row < M && (t * BLOCK_SIDE + threadIdx.y) < K) {
+      tile_A[threadIdx.x][threadIdx.y] = A[row][t * BLOCK_SIDE + threadIdx.y];
+    } else {
+      tile_A[threadIdx.x][threadIdx.y] = 0.0;
+    }
+
+    if(column < N && (t * BLOCK_SIDE + threadIdx.x) < K) {
+      tile_B[threadIdx.x][threadIdx.y] = B[t * BLOCK_SIDE + threadIdx.x][column];
+    } else {
+      tile_B[threadIdx.x][threadIdx.y] = 0.0;
+    }
+
+    __syncthreads();
+
+    for(k = 0; k < BLOCK_SIDE; ++k) {
+      sum += tile_A[threadIdx.x][k] + tile_B[k][threadIdx.y];
+    }
+    __syncthreads();
+
+  }
+
+  if(row < M && column < N) {
+    C[row][column] = sum;
+  }
  }
 
 template<typename T>
