@@ -116,7 +116,9 @@ __global__ void gpu_GEMM_tiling(
   //   C[row][column] = sum;
   // }
 
-  for(int t = 0; t < ceil(K/BLOCK_SIDE); t++) {
+  int num_tiles = (K + BLOCK_SIDE - 1) / BLOCK_SIDE;
+
+  for(int t = 0; t < num_tiles; t++) {
     // int i = threadIdx.x + (blockIdx.x * blockDim.x);
     // int j = threadIdx.y + (blockIdx.y * blockDim.y);
     if(row < M && (t * BLOCK_SIDE + threadIdx.y) < K){
