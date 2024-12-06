@@ -133,7 +133,7 @@ __global__ void gpu_GEMM_tiling(
 
     __syncthreads();
 
-    for(k = 0; k < BLOCK_SIDE; k++) {
+    for(int k = 0; k < BLOCK_SIDE; k++) {
       sum = tile_A[threadIdx.x][k] * tile_B[k][threadIdx.y];
     }
 
