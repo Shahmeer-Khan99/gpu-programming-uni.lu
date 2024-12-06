@@ -79,40 +79,71 @@ __global__ void gpu_GEMM_tiling(
   T const alpha,
   T const* const A, size_t const ldA, T const* const B, size_t const ldB,
   T const beta,
-  T* const C, size_t const ldC
+  T* const C, size_t const ldC  
 ) {
-  __shared__ float tile_A[BLOCK_SIDE][BLOCK_SIDE];
-  __shared__ float tile_B[BLOCK_SIDE][BLOCK_SIDE];
+  __shared__ float tile_A[BLOCK_SIDE * BLOCK_SIDE];
+  __shared__ float tile_B[BLOCK_SIDE * BLOCK_SIDE];
 
-   int row = threadIdx.x + (blockIdx.x * blockDim.x);
-  int column = threadIdx.y + (blockIdx.y * blockDim.y);
+  // int row = threadIdx.x + (blockIdx.x * blockDim.x);
+  // int column = threadIdx.y + (blockIdx.y * blockDim.y);
+
+  int row = blockIdx.x * BLOCK_SIDE + threadIdx.x;
+  int col = blockIdx.y * BLOCK_SIDE + threadIdx.y;
   float sum = 0.0;
-  for(int t = 0; t < (K + BLOCK_SIDE - 1)/BLOCK_SIDE; ++t){
-    if(row < M && (t * BLOCK_SIDE + threadIdx.y) < K) {
-      tile_A[threadIdx.x][threadIdx.y] = A[row][t * BLOCK_SIDE + threadIdx.y];
+  // for(int t = 0; t < (K + BLOCK_SIDE - 1)/BLOCK_SIDE; ++t){
+  //   if(row < M && (t * BLOCK_SIDE + threadIdx.y) < K) {
+  //     tile_A[threadIdx.x][threadIdx.y] = A[row][t * BLOCK_SIDE + threadIdx.y];
+  //   } else {
+  //     tile_A[threadIdx.x][threadIdx.y] = 0.0;
+  //   }
+
+  //   if(column < N && (t * BLOCK_SIDE + threadIdx.x) < K) {
+  //     tile_B[threadIdx.x][threadIdx.y] = B[t * BLOCK_SIDE + threadIdx.x][column];
+  //   } else {
+  //     tile_B[threadIdx.x][threadIdx.y] = 0.0;
+  //   }
+
+  //   __syncthreads();
+
+  //   for(int k = 0; k < BLOCK_SIDE; ++k) {
+  //     sum += tile_A[threadIdx.x][k] + tile_B[k][threadIdx.y];
+  //   }
+  //   __syncthreads();
+
+  // }
+
+  // if(row < M && column < N) {
+  //   C[row][column] = sum;
+  // }
+
+  for(int t = 0; t < ceil(K/BLOCK_SIDE), t++) {
+    // int i = threadIdx.x + (blockIdx.x * blockDim.x);
+    // int j = threadIdx.y + (blockIdx.y * blockDim.y);
+    if(row < M && (t * BLOCK_SIDE + threadIdx.y) < K){
+      tile_A[threadIdx.x][threadIdx.y] = A[row * ldA + (t * BLOCK_SIDE + threadIdx.y)];
     } else {
       tile_A[threadIdx.x][threadIdx.y] = 0.0;
     }
 
-    if(column < N && (t * BLOCK_SIDE + threadIdx.x) < K) {
-      tile_B[threadIdx.x][threadIdx.y] = B[t * BLOCK_SIDE + threadIdx.x][column];
+    if(col < N && (t * BLOCK_SIDE + threadIdx.x) < K) {
+      tile_B[threadIdx.x][threadIdx.y] = B[(t * BLOCK_SIDE + threadIdx.x) * ldB + col];
     } else {
       tile_B[threadIdx.x][threadIdx.y] = 0.0;
     }
 
     __syncthreads();
 
-    for(int k = 0; k < BLOCK_SIDE; ++k) {
-      sum += tile_A[threadIdx.x][k] + tile_B[k][threadIdx.y];
+    for(k = 0; k < BLOCK_SIDE; k++) {
+      sum = tile_A[threadIdx.x][k] * tile_B[k][threadIdx.y];
     }
+
     __syncthreads();
-
   }
 
-  if(row < M && column < N) {
-    C[row][column] = sum;
+  if(row < N && col < N) {
+    C[row * ldC + col] = alpha * sum + beta * C[row * ldC + col];
   }
- }
+}
 
 template<typename T>
 void gpu_GEMM(
