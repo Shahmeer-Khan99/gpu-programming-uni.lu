@@ -116,19 +116,19 @@ __global__ void gpu_GEMM_tiling(
   //   C[row][column] = sum;
   // }
 
-  for(int t = 0; t < ceil(K/BLOCK_SIDE), t++) {
+  for(int t = 0; t < ceil(K/BLOCK_SIDE); t++) {
     // int i = threadIdx.x + (blockIdx.x * blockDim.x);
     // int j = threadIdx.y + (blockIdx.y * blockDim.y);
     if(row < M && (t * BLOCK_SIDE + threadIdx.y) < K){
-      tile_A[threadIdx.x][threadIdx.y] = A[row * ldA + (t * BLOCK_SIDE + threadIdx.y)];
+      tile_A[threadIdx.x * BLOCK_SIDE + threadIdx.y] = A[row * ldA + (t * BLOCK_SIDE + threadIdx.y)];
     } else {
-      tile_A[threadIdx.x][threadIdx.y] = 0.0;
+      tile_A[threadIdx.x * BLOCK_SIDE + threadIdx.y] = 0.0;
     }
 
     if(col < N && (t * BLOCK_SIDE + threadIdx.x) < K) {
-      tile_B[threadIdx.x][threadIdx.y] = B[(t * BLOCK_SIDE + threadIdx.x) * ldB + col];
+      tile_B[threadIdx.x * BLOCK_SIDE + threadIdx.y] = B[(t * BLOCK_SIDE + threadIdx.x) * ldB + col];
     } else {
-      tile_B[threadIdx.x][threadIdx.y] = 0.0;
+      tile_B[threadIdx.x * BLOCK_SIDE + threadIdx.y] = 0.0;
     }
 
     __syncthreads();
