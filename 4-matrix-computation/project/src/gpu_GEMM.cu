@@ -87,8 +87,8 @@ __global__ void gpu_GEMM_tiling(
   // int row = threadIdx.x + (blockIdx.x * blockDim.x);
   // int column = threadIdx.y + (blockIdx.y * blockDim.y);
 
-  int row = blockIdx.x * BLOCK_SIDE + threadIdx.x;
-  int col = blockIdx.y * BLOCK_SIDE + threadIdx.y;
+  // int row = blockIdx.x * BLOCK_SIDE + threadIdx.x;
+  // int col = blockIdx.y * BLOCK_SIDE + threadIdx.y;
   float sum = 0.0;
   // for(int t = 0; t < (K + BLOCK_SIDE - 1)/BLOCK_SIDE; ++t){
   //   if(row < M && (t * BLOCK_SIDE + threadIdx.y) < K) {
@@ -119,31 +119,41 @@ __global__ void gpu_GEMM_tiling(
   int num_tiles = (K + BLOCK_SIDE - 1) / BLOCK_SIDE;
 
   for(int t = 0; t < num_tiles; t++) {
+    //A's rows and columns
+    int row_A = blockIdx.x * BLOCK_SIDE + threadIdx.x;
+    int col_A = t * BLOCK_SIDE + threadIdx.y;
+
+    //B's rows and columns
+    int row_B = t * BLOCK_SIDE + threadIdx.x;
+    int col_B = blockIdx.y * BLOCK_SIDE + threadIdx.y;
+
     // int i = threadIdx.x + (blockIdx.x * blockDim.x);
     // int j = threadIdx.y + (blockIdx.y * blockDim.y);
-    if(row < M && (t * BLOCK_SIDE + threadIdx.y) < K){
-      tile_A[threadIdx.x * BLOCK_SIDE + threadIdx.y] = A[row * ldA + (t * BLOCK_SIDE + threadIdx.y)];
+    if(row_A < M && col_A < K){
+      tile_A[threadIdx.x * BLOCK_SIDE + threadIdx.y] = A[row_A * ldA + col_A];
     } else {
       tile_A[threadIdx.x * BLOCK_SIDE + threadIdx.y] = 0.0;
     }
 
-    if(col < N && (t * BLOCK_SIDE + threadIdx.x) < K) {
-      tile_B[threadIdx.x * BLOCK_SIDE + threadIdx.y] = B[(t * BLOCK_SIDE + threadIdx.x) * ldB + col];
+    if(row_B < K && col_B < N) {
+      tile_B[threadIdx.x * BLOCK_SIDE + threadIdx.y] = B[row_B * ldB + col_B];
     } else {
       tile_B[threadIdx.x * BLOCK_SIDE + threadIdx.y] = 0.0;
     }
 
     __syncthreads();
 
-    for(int k = 0; k < BLOCK_SIDE; k++) {
+    // Loop over the tile
+    for (int k = 0; k < BLOCK_SIDE; ++k) {
+      // Multiply the corresponding elements of the current tiles
       sum += tile_A[threadIdx.x * BLOCK_SIDE + k] * tile_B[k * BLOCK_SIDE + threadIdx.y];
     }
 
     __syncthreads();
   }
 
-  if(row < N && col < N) {
-    C[row * ldC + col] = alpha * sum + beta * C[row * ldC + col];
+  if (row_A < M && col_B < N) {
+    C[row_A * ldC + col_B] = alpha * sum + beta * C[row_A * ldC + col_B];
   }
 }
 
