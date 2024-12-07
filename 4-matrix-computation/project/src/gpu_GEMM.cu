@@ -89,6 +89,8 @@ __global__ void gpu_GEMM_tiling(
 
   // int row = blockIdx.x * BLOCK_SIDE + threadIdx.x;
   // int col = blockIdx.y * BLOCK_SIDE + threadIdx.y;
+  int row_A = blockIdx.x * BLOCK_SIDE + threadIdx.x;
+  int col_B = blockIdx.y * BLOCK_SIDE + threadIdx.y;
   float sum = 0.0;
   // for(int t = 0; t < (K + BLOCK_SIDE - 1)/BLOCK_SIDE; ++t){
   //   if(row < M && (t * BLOCK_SIDE + threadIdx.y) < K) {
@@ -120,12 +122,10 @@ __global__ void gpu_GEMM_tiling(
 
   for(int t = 0; t < num_tiles; t++) {
     //A's rows and columns
-    int row_A = blockIdx.x * BLOCK_SIDE + threadIdx.x;
     int col_A = t * BLOCK_SIDE + threadIdx.y;
 
     //B's rows and columns
     int row_B = t * BLOCK_SIDE + threadIdx.x;
-    int col_B = blockIdx.y * BLOCK_SIDE + threadIdx.y;
 
     // int i = threadIdx.x + (blockIdx.x * blockDim.x);
     // int j = threadIdx.y + (blockIdx.y * blockDim.y);
