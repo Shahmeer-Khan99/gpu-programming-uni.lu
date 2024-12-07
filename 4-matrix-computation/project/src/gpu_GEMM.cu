@@ -136,7 +136,7 @@ __global__ void gpu_GEMM_tiling(
     }
 
     if(row_B < K && col_B < N) {
-      tile_B[threadIdx.x * BLOCK_SIDE + threadIdx.y] = B[row_A + col_B * ldB];
+      tile_B[threadIdx.x * BLOCK_SIDE + threadIdx.y] = B[row_B + col_B * ldB];
     } else {
       tile_B[threadIdx.x * BLOCK_SIDE + threadIdx.y] = 0.0;
     }
