@@ -153,7 +153,7 @@ __global__ void gpu_GEMM_tiling(
   }
 
   if (row_A < M && col_B < N) {
-    C[row_A * ldC + col_B] = alpha * sum + beta * C[row_A * ldC + col_B];
+    C[row_A + col_B * ldC] = alpha * sum + beta * C[row_A + col_B * ldC];
   }
 }
 
