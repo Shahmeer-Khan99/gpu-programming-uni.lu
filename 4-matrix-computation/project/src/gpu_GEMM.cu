@@ -6,6 +6,7 @@
 #include <cmath>
 
 #include <cblas.h>
+#include <cublasXt.h>
 
 #include "utility.hpp"
 #include "datatypes.hpp"
@@ -260,6 +261,38 @@ float gemm_error(
   size_t const N = mtxC.n;
   size_t const K = mtxA.n;
 
+  //CUBLAS CALL
+  cublasHandle_t handle;
+  float *A;
+  float *B;
+  float *dAccu;
+
+  cublasStatus_t stat = cublasCreate(&handle);
+  if (stat != CUBLAS_STATUS_SUCCESS) {
+    std::cerr << "CUBLAS initialization failed!" << std::endl;
+    exit(EXIT_FAILURE);
+  }
+
+  try_CUDA(cudaMallocHost(&A, sizeof(float) * mtxA.nnz));
+  try_CUDA(cudaMallocHost(&B, sizeof(float) * mtxB.nnz));
+  try_CUDA(cudaMallocHost(&dAccu, sizeof(float) * accu.nnz));
+  try_CUDA(cudaMemcpy(A, mtxA.data, sizeof(float) * mtxA.nnz, cudaMemcpyHostToDevice));
+  try_CUDA(cudaMemcpy(B, mtxB.data, sizeof(float) * mtxB.nnz, cudaMemcpyHostToDevice));
+  try_CUDA(cudaMemcpy(dAccu, accu.data, sizeof(float) * accu.nnz, cudaMemcpyHostToDevice));
+
+
+
+  cublasSgemm(handle, CUBLAS_OP_N, CUBLAS_OP_N, M, N, K, &alpha, A, mtxA.ld, B,
+            mtxB.ld, &beta, dAccu, accu.ld);
+
+  try_CUDA(cudaMemcpy(accu.data, dAccu, sizeof(float) * accu.nnz,
+                      cudaMemcpyDeviceToHost));
+
+  try_CUDA(cudaFreeHost(A));
+  try_CUDA(cudaFreeHost(B));
+  try_CUDA(cudaFreeHost(dAccu));
+  cublasDestroy(handle);
+
   // void cblas_sgemm(
   //   CBLAS_LAYOUT layout, CBLAS_TRANSPOSE TransA, CBLAS_TRANSPOSE TransB,
   //   const CBLAS_INT M, const CBLAS_INT N, const CBLAS_INT K,
@@ -268,14 +301,14 @@ float gemm_error(
   //   const float beta,
   //   float *C, const CBLAS_INT ldc
   // );
-  cblas_sgemm(
-    CblasColMajor, CblasNoTrans, CblasNoTrans,
-    M, N, K,
-    alpha,
-    mtxA.data, mtxA.ld, mtxB.data, mtxB.ld,
-    beta,
-    accu.data, accu.ld
-  );
+  // cblas_sgemm(
+  //   CblasColMajor, CblasNoTrans, CblasNoTrans,
+  //   M, N, K,
+  //   alpha,
+  //   mtxA.data, mtxA.ld, mtxB.data, mtxB.ld,
+  //   beta,
+  //   accu.data, accu.ld
+  // );
 
   // accu <- accu - C
   matrix_saxpy(
