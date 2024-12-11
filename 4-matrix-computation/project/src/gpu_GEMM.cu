@@ -84,40 +84,9 @@ __global__ void gpu_GEMM_tiling(
 ) {
   __shared__ float tile_A[BLOCK_SIDE * BLOCK_SIDE];
   __shared__ float tile_B[BLOCK_SIDE * BLOCK_SIDE];
-
-  // int row = threadIdx.x + (blockIdx.x * blockDim.x);
-  // int column = threadIdx.y + (blockIdx.y * blockDim.y);
-
-  // int row = blockIdx.x * BLOCK_SIDE + threadIdx.x;
-  // int col = blockIdx.y * BLOCK_SIDE + threadIdx.y;
   int row_A = blockIdx.x * BLOCK_SIDE + threadIdx.x;
   int col_B = blockIdx.y * BLOCK_SIDE + threadIdx.y;
   float sum = 0.0;
-  // for(int t = 0; t < (K + BLOCK_SIDE - 1)/BLOCK_SIDE; ++t){
-  //   if(row < M && (t * BLOCK_SIDE + threadIdx.y) < K) {
-  //     tile_A[threadIdx.x][threadIdx.y] = A[row][t * BLOCK_SIDE + threadIdx.y];
-  //   } else {
-  //     tile_A[threadIdx.x][threadIdx.y] = 0.0;
-  //   }
-
-  //   if(column < N && (t * BLOCK_SIDE + threadIdx.x) < K) {
-  //     tile_B[threadIdx.x][threadIdx.y] = B[t * BLOCK_SIDE + threadIdx.x][column];
-  //   } else {
-  //     tile_B[threadIdx.x][threadIdx.y] = 0.0;
-  //   }
-
-  //   __syncthreads();
-
-  //   for(int k = 0; k < BLOCK_SIDE; ++k) {
-  //     sum += tile_A[threadIdx.x][k] + tile_B[k][threadIdx.y];
-  //   }
-  //   __syncthreads();
-
-  // }
-
-  // if(row < M && column < N) {
-  //   C[row][column] = sum;
-  // }
 
   int num_tiles = (K + BLOCK_SIDE - 1) / BLOCK_SIDE;
 
@@ -128,8 +97,6 @@ __global__ void gpu_GEMM_tiling(
     //B's rows and columns
     int row_B = t * BLOCK_SIDE + threadIdx.x;
 
-    // int i = threadIdx.x + (blockIdx.x * blockDim.x);
-    // int j = threadIdx.y + (blockIdx.y * blockDim.y);
     if(row_A < M && col_A < K){
       tile_A[threadIdx.x * BLOCK_SIDE + threadIdx.y] = A[row_A + col_A * ldA];
     } else {
@@ -144,12 +111,9 @@ __global__ void gpu_GEMM_tiling(
 
     __syncthreads();
 
-    // Loop over the tile
     for (int k = 0; k < BLOCK_SIDE; ++k) {
-      // Multiply the corresponding elements of the current tiles
       sum += tile_A[threadIdx.x * BLOCK_SIDE + k] * tile_B[k * BLOCK_SIDE + threadIdx.y];
     }
-
     __syncthreads();
   }
 
